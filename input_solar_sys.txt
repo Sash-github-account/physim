@@ -1,0 +1,6 @@
+2
+2
+1e8
+1e6
+1
+input_data.txt
