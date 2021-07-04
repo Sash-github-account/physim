@@ -724,6 +724,15 @@ class Simulation_object():
         animation.FuncAnimation(fig3, self.animate, init_func= self.init, frames= int(timesteps/throttle_ip), interval=1, blit=False)   
         plt.show()
     #---------#
+
+    #---------#
+    def get_proc_memory_uage(self):
+            process = psutil.Process(os.getpid())
+            print('Proc mem usage: '+ str(process.memory_info().rss/1024**2) + ' MBytes')  
+            file_stats = os.stat(__file__)
+            print(file_stats)
+            print(f'File Size in KiloBytes is {file_stats.st_size / 1024}')
+    #---------#
     
 #---------#      
         
@@ -757,11 +766,7 @@ if __name__ == '__main__':
     print( 'Tot run time: ' + str(end_time - start_time))
        
     #------Calculate memory Usage------#
-    process = psutil.Process(os.getpid())
-    print('Proc mem usage: '+ str(process.memory_info().rss/1024**2) + ' MBytes')  
-    file_stats = os.stat(__file__)
-    print(file_stats)
-    print(f'File Size in KiloBytes is {file_stats.st_size / 1024}')
+    sim.get_proc_memory_uage()
 #---------#  
  
     
