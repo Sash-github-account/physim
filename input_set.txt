@@ -1,0 +1,6 @@
+2
+2
+1.49e-15
+1e-18
+1
+input_init_cond.txt
