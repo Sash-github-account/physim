@@ -20,7 +20,6 @@ references:
 
 #---------#
 from matplotlib import pyplot as plt
-import mpl_toolkits.mplot3d.axes3d as p3
 from matplotlib.animation import FuncAnimation
 import time
 import math
@@ -549,6 +548,12 @@ class Physical_System_of_particles:
 class Simulation_object():
     
     #---------#
+    anim_field = True
+    anim_traj = False
+    run_w_log = False
+    elec_or_mag = 'elec'
+    plot_traj = True
+    plot_fields = True
     endtime = 0 
     timeres = 0
     timesteps = 0
@@ -564,6 +569,9 @@ class Simulation_object():
     E_X_plot = []
     E_Y_plot = []
     E_Z_plot = []
+    B_X_plot = []
+    B_Y_plot = []
+    B_Z_plot = []
     thrle_cnt = 0
     num = 0
     PE = 0
@@ -621,8 +629,7 @@ class Simulation_object():
             if (file1 != None): file1.write('time: '+ str(self.cur_timestep * self.timeres)+'\n')
             
             self.update_xyzt_plot(system)
-            
-            
+                        
             #system.solve_sr_acc_sys_particles()
             system.solve_sr_acc_sys_particles_w_retd_fields(self.cur_timestep)
             
@@ -638,43 +645,53 @@ class Simulation_object():
     #---------#
            
     #---------#
-    def run_n_particle_sim_w_log_file(self, systm):   
-        file1 = open('partdata.txt','w')
-        self.run_n_particle_sim(systm, file1)  
-        file1.close()
+    def run_n_particle_sim_w_log_file(self, systm, filename):
+        if(filename != None):
+            file1 = open('partdata.txt','w')
+            self.run_n_particle_sim(systm, file1)  
+            file1.close()
+        else:
+            self.run_n_particle_sim(systm, None)  
+
     #---------#
-    
+               
     #---------#           
-    def run_n_particle_sim_w_field_anim(self, system, file1):   
+    def run_n_particle_sim_w_elec_or_mag_field_anim(self, system, file1):   
         for  i in range(self.timesteps):
         
             self.cur_timestep = i    
         
             if (file1 != None): file1.write('time: '+ str(self.cur_timestep * self.timeres)+'\n')
-            
-            
-            x_field, y_field, z_field, E_X_plot, E_Y_plot, E_Z_plot = self.get_elec_field(system)
  
-            self.x_field.append(x_field)
-            self.y_field.append(y_field)
-            self.z_field.append(z_field)
-            self.E_X_plot.append(E_X_plot)
-            self.E_Y_plot.append(E_Y_plot)
-            self.E_Z_plot.append(E_Z_plot)
+            if(self.elec_or_mag == 'elec'):                       
+                x_field, y_field, z_field, E_X_plot, E_Y_plot, E_Z_plot = self.get_elec_field_grid(system)    
+                self.x_field.append(x_field)
+                self.y_field.append(y_field)
+                self.z_field.append(z_field)
+                self.E_X_plot.append(E_X_plot)
+                self.E_Y_plot.append(E_Y_plot)
+                self.E_Z_plot.append(E_Z_plot)
+            else:
+                x_field, y_field, z_field, B_X_plot, B_Y_plot, B_Z_plot = self.get_mag_field_grid(system)   
+                self.x_field.append(x_field)
+                self.y_field.append(y_field)
+                self.z_field.append(z_field)
+                self.B_X_plot.append(B_X_plot)
+                self.B_Y_plot.append(B_Y_plot)
+                self.B_Z_plot.append(B_Z_plot) 
+            
             #system.solve_sr_acc_sys_particles()
             system.solve_sr_acc_sys_particles_w_retd_fields(self.cur_timestep)
-            
-            
+                       
             system.detect_collision(file1)
         
             if (file1 != None): file1.write('TKE: '+str(self.TKE)+'\t'+'PE: '+str(self.PE)+'\t'+'TE: '+str(self.TE)+'\n')
         
             system.update_sys_state(self.timeres)
-            
-            
+                      
         print ('throttle:', self.thrle_cnt)         
-    #---------#    
-    
+    #---------# 
+           
     #---------#
     def gen_1_plot_for_all_particles(self):
         fig, ax = plt.subplots(subplot_kw={'projection': '3d'})
@@ -712,31 +729,25 @@ class Simulation_object():
         fig = plt.figure()
         ax = fig.gca(projection='3d')
         
-        x, y, z = np.meshgrid(np.arange(-10e-11, 12e-11, 2e-11),
-                      np.arange(-10e-11, 12e-11, 2e-11),
-                      np.arange(-10e-11, 12e-11, 2e-11))
-
-        E_X = [[[0 for z_cor in range(len(x))] for y_cor in range(len(x[0]))]for x_cor in range(len(x[0][0]))]
-        E_Y = [[[0 for z_cor in range(len(x))] for y_cor in range(len(x[0]))]for x_cor in range(len(x[0][0]))]
-        E_Z = [[[0 for z_cor in range(len(x))] for y_cor in range(len(x[0]))]for x_cor in range(len(x[0][0]))]
-                    
-        for x_cor in range(len(x[0][0])):
-            for y_cor in range(len(x[0])):
-                for z_cor in range(len(x)):
-                    r = [x[x_cor][y_cor][z_cor], y[x_cor][y_cor][z_cor], z[x_cor][y_cor][z_cor]]
-                    E = system.elec_field(r)
-                    print("Point: " + str(r))
-                    print("Field: " + str(E))
-                    E_X[x_cor][y_cor][z_cor] = E[0]
-                    E_Y[x_cor][y_cor][z_cor] = E[1]
-                    E_Z[x_cor][y_cor][z_cor] = E[2]                         
-        ax.quiver(x, y, z, E_X, E_Y, E_Z, length=0.1e-22, color = 'black')       
+        x, y, z, E_X, E_Y, E_Z = self.get_elec_field_grid(system)
+                        
+        ax.quiver(x, y, z, E_X, E_Y, E_Z, length= 0.1e-22, color = 'black')       
         plt.show()
-        return x, y, z, E_X, E_Y, E_Z
     #---------#
     
     #---------#
-    def get_elec_field(self, system):         
+    def plot_mag_field(self, system):         
+        fig = plt.figure()
+        ax = fig.gca(projection='3d')
+        
+        x, y, z, B_X, B_Y, B_Z = self.get_mag_field_grid(system)
+                        
+        ax.quiver(x, y, z, B_X, B_Y, B_Z, length= 1e-11, color = 'black')       
+        plt.show()
+    #---------#   
+    
+    #---------#
+    def get_elec_field_grid(self, system):         
         x, y, z = np.meshgrid(np.arange(-10e-11, 12e-11, 2.5e-11),
                       np.arange(-10e-11, 12e-11, 2.5e-11),
                       np.arange(-10e-11, 12e-11, 2.5e-11))
@@ -757,9 +768,7 @@ class Simulation_object():
     #---------#  
     
     #---------#
-    def plot_mag_field(self, system):         
-        fig = plt.figure()
-        ax = fig.gca(projection='3d')       
+    def get_mag_field_grid(self, system):              
         x, y, z = np.meshgrid(np.arange(-10e-11, 16e-11, 5e-11),
                       np.arange(-10e-11, 12e-11, 5e-11),
                       np.arange(-10e-11, 12e-11, 5e-11))
@@ -773,60 +782,43 @@ class Simulation_object():
                 for z_cor in range(len(x)):
                     r = [x[x_cor][y_cor][z_cor], y[x_cor][y_cor][z_cor], z[x_cor][y_cor][z_cor]]
                     B = system.mag_field(r)
-                    print("Point: " + str(r))
-                    print("Field: " + str(B))
                     B_X[x_cor][y_cor][z_cor] = B[0]
                     B_Y[x_cor][y_cor][z_cor] = B[1]
                     B_Z[x_cor][y_cor][z_cor] = B[2]                        
-        ax.quiver(x, y, z, B_X, B_Y, B_Z, length=1e-11, color = 'black')       
-        plt.show()        
+        return x, y, z, B_X, B_Y, B_Z     
     #---------#
 
     #---------#
-    def anim_elec_field(self):
-        fig, ax = plt.subplots(subplot_kw=dict(projection="3d"))
-    
-        def field_snpsht(time):
-            return self.x_field[time], self.y_field[time], self.z_field[time], self.E_X_plot[time], self.E_Y_plot[time], self.E_Z_plot[time] 
+    def anim_elec_or_mag_field(self, anim, elec_or_mag):
+        
+        if(anim):
+            fig, ax = plt.subplots(subplot_kw=dict(projection="3d"))
+        
+            def mag_field_snpsht(time):
+                time = int(time)
+                return sim.x_field[time], sim.y_field[time], sim.z_field[time], sim.B_X_plot[time], sim.B_Y_plot[time], sim.B_Z_plot[time] 
+        
+            def elec_field_snpsht(time):
+                time = int(time)
+                return sim.x_field[time], sim.y_field[time], sim.z_field[time], sim.E_X_plot[time], sim.E_Y_plot[time], sim.E_Z_plot[time] 
+             
+            if(elec_or_mag == 'elec'):
+                quiver = ax.quiver(*elec_field_snpsht(0), length = 1e-22, color = 'blue')
+            else:
+                quiver = ax.quiver(*mag_field_snpsht(0), length = 1e-11, color = 'blue')
               
-        quiver = ax.quiver(*field_snpsht(0), length = 0.1e-22, color = 'blue')
-        
-        def update(time):
-            global quiver
-            quiver.remove()
-            quiver = ax.quiver(*field_snpsht(time), length = 0.1e-22, color = 'blue')
-        
-        ani = FuncAnimation(fig, update, frames=np.linspace(0, self.endtime, self.timesteps), interval=50)
-        plt.show()
-    #---------#
-
-    def trial(self):
-        
-        fig, ax = plt.subplots(subplot_kw=dict(projection="3d"))
-        
-        def get_arrow(theta):
-                x, y, z = np.meshgrid(np.arange(-1, 1, 0.5),
-                                  np.arange(-1, 1, 0.5),
-                                  np.arange(-1, 1, 0.5))
-                u = np.sin(2*theta) * np.sin(np.pi * x) * np.cos(np.pi * y) * np.cos(np.pi * z)
-                v = np.sin(3*theta) * -np.cos(np.pi * x) * np.sin(np.pi * y) * np.cos(np.pi * z)
-                w = np.cos(3*theta) * (np.sqrt(2.0 / 3.0) * np.cos(np.pi * x) * np.cos(np.pi * y) *
-                 np.sin(np.pi * z))
-                return x,y,z,u,v,w
-            
-        quiver = ax.quiver(*get_arrow(0))
-        
-        ax.set_xlim(-2, 2)
-        ax.set_ylim(-2, 2)
-        ax.set_zlim(-2, 2)
-        
-        def update(theta):
-            global quiver
-            quiver.remove()
-            quiver = ax.quiver(*get_arrow(theta))
-        
-        ani = FuncAnimation(fig, update, frames=np.linspace(0,2*np.pi,200), interval=50)
-        plt.show()
+            def update(time):
+                global quiver
+                quiver.remove()            
+                if(elec_or_mag == 'elec'):
+                    quiver = ax.quiver(*elec_field_snpsht(time), length = 1e-22, color = 'blue')
+                else:
+                    quiver = ax.quiver(*mag_field_snpsht(time), length = 1e-11, color = 'blue')
+                              
+            ani = FuncAnimation(fig, update, frames=np.linspace(0, sim.timesteps, sim.timesteps), interval=50)
+            ani
+            plt.show()
+    #--------------#
 
     #---------#
     def get_proc_memory_usage(self):
@@ -857,39 +849,61 @@ if __name__ == '__main__':
     sim.setup_x_y_z_t_plots(system)
         
     #-------Run particle trajectory simulation-----#
-    #sim.run_n_particle_sim_w_log_file(system)
-    sim.run_n_particle_sim_w_field_anim(system, None)
-    #--- Simulate electric field variation in time ----#
-    #---- Unable run animation when used as a method of simulation object -----#
-    fig, ax = plt.subplots(subplot_kw=dict(projection="3d"))
-
-    def field_snpsht(time):
-        time = int(time)
-        return sim.x_field[time], sim.y_field[time], sim.z_field[time], sim.E_X_plot[time], sim.E_Y_plot[time], sim.E_Z_plot[time] 
-          
-    quiver = ax.quiver(*field_snpsht(0), length = 0.1e-22, color = 'blue')
-    
-    def update(time):
-        global quiver
-        quiver.remove()
-        quiver = ax.quiver(*field_snpsht(time), length = 1e-22, color = 'blue')
-    
-    ani = FuncAnimation(fig, update, frames=np.linspace(0, sim.timesteps, sim.timesteps), interval=50)
-    plt.show()
+    if(sim.anim_field):
+        sim.run_n_particle_sim_w_elec_or_mag_field_anim(system, None)
+    else:
+        sim.run_n_particle_sim_w_log_file(system)
+        
     #------Plot trajectories and fields----------#
-    # sim.gen_1_plot_for_all_particles()
-    # sim.plot_mag_field(system)
-    # sim.plot_elec_field(system)
+    if(sim.plot_traj):
+        sim.gen_1_plot_for_all_particles()
+        
+    if(sim.plot_fields):
+        sim.plot_mag_field(system)
+        sim.plot_elec_field(system)
+ 
     
-    #--------Animated plot----------#
-    #sim.anim_plot_for_all_particles()
-
+    #--------Animated simulations----------#
+    if(sim.anim_traj):
+        sim.anim_plot_for_all_particles()
+    
+    #--- Simulate electric field variation in time ----#
+    #---- Inlining code, Unable to run animation when used as a method of Simulation_object() or a separate function -----# 
+    if(sim.anim_field):
+        fig, ax = plt.subplots(subplot_kw=dict(projection="3d"))
+    
+        def mag_field_snpsht(time):
+            time = int(time)
+            return sim.x_field[time], sim.y_field[time], sim.z_field[time], sim.B_X_plot[time], sim.B_Y_plot[time], sim.B_Z_plot[time] 
+    
+        def elec_field_snpsht(time):
+            time = int(time)
+            return sim.x_field[time], sim.y_field[time], sim.z_field[time], sim.E_X_plot[time], sim.E_Y_plot[time], sim.E_Z_plot[time] 
+         
+        if(sim.elec_or_mag == 'elec'):
+            quiver = ax.quiver(*elec_field_snpsht(0), length = 1e-22, color = 'blue')
+        else:
+            quiver = ax.quiver(*mag_field_snpsht(0), length = 1e-11, color = 'blue')
+      
+        def update(time):
+            global quiver
+            quiver.remove()            
+            if(sim.elec_or_mag == 'elec'):
+                quiver = ax.quiver(*elec_field_snpsht(time), length = 1e-22, color = 'blue')
+            else:
+                quiver = ax.quiver(*mag_field_snpsht(time), length = 1e-11, color = 'blue')
+                       
+        ani = FuncAnimation(fig, update, frames=np.linspace(0, sim.timesteps, sim.timesteps), interval=50)
+        plt.show()
+    #--------------#
+        
+    #------Calculate memory Usage------#
+    sim.get_proc_memory_usage()
+    
     #-----End of Sim--------#    
     end_time = time.time()    
     print( 'Tot run time: ' + str(end_time - start_time))
-       
-    #------Calculate memory Usage------#
-    sim.get_proc_memory_usage()
+   
 #---------#  
  
     
