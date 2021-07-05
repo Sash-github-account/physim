@@ -553,7 +553,7 @@ class Simulation_object():
     run_w_log = False
     elec_or_mag = 'elec'
     plot_traj = True
-    plot_fields = True
+    plot_fields = False
     endtime = 0 
     timeres = 0
     timesteps = 0
@@ -647,7 +647,7 @@ class Simulation_object():
     #---------#
     def run_n_particle_sim_w_log_file(self, systm, filename):
         if(filename != None):
-            file1 = open('partdata.txt','w')
+            file1 = open('partdata.log','w')
             self.run_n_particle_sim(systm, file1)  
             file1.close()
         else:
@@ -844,7 +844,7 @@ if __name__ == '__main__':
     system = Physical_System_of_particles()
 
     #------Create Sim and System params-----#    
-    sim.read_sim_param_input_file("input_set.txt")
+    sim.read_sim_param_input_file("input_set.sim")
     system.setup_system_of_particles_to_simulate(sim)
     sim.setup_x_y_z_t_plots(system)
         
@@ -854,13 +854,13 @@ if __name__ == '__main__':
     else:
         sim.run_n_particle_sim_w_log_file(system)
         
-    #------Plot trajectories and fields----------#
-    if(sim.plot_traj):
-        sim.gen_1_plot_for_all_particles()
-        
-    if(sim.plot_fields):
-        sim.plot_mag_field(system)
-        sim.plot_elec_field(system)
+        #------Plot trajectories and fields----------#
+        if(sim.plot_traj):
+            sim.gen_1_plot_for_all_particles()
+            
+        if(sim.plot_fields):
+            sim.plot_mag_field(system)
+            sim.plot_elec_field(system)
  
     
     #--------Animated simulations----------#
@@ -881,17 +881,17 @@ if __name__ == '__main__':
             return sim.x_field[time], sim.y_field[time], sim.z_field[time], sim.E_X_plot[time], sim.E_Y_plot[time], sim.E_Z_plot[time] 
          
         if(sim.elec_or_mag == 'elec'):
-            quiver = ax.quiver(*elec_field_snpsht(0), length = 1e-22, color = 'blue')
+            quiver = ax.quiver(*elec_field_snpsht(0), length = 0.1e-22, color = 'blue')
         else:
-            quiver = ax.quiver(*mag_field_snpsht(0), length = 1e-11, color = 'blue')
+            quiver = ax.quiver(*mag_field_snpsht(0), length = 0.1e-11, color = 'blue')
       
         def update(time):
             global quiver
             quiver.remove()            
             if(sim.elec_or_mag == 'elec'):
-                quiver = ax.quiver(*elec_field_snpsht(time), length = 1e-22, color = 'blue')
+                quiver = ax.quiver(*elec_field_snpsht(time), length = 0.1e-22, color = 'blue')
             else:
-                quiver = ax.quiver(*mag_field_snpsht(time), length = 1e-11, color = 'blue')
+                quiver = ax.quiver(*mag_field_snpsht(time), length = 0.1e-11, color = 'blue')
                        
         ani = FuncAnimation(fig, update, frames=np.linspace(0, sim.timesteps, sim.timesteps), interval=50)
         plt.show()
