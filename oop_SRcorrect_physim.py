@@ -165,8 +165,8 @@ class Emag_particle:
             self.a_dot = (np.array(self.acc) - np.array(self.prev_acc) ) / timeres
         else:
             self.a_dot = [0,0,0]
-        print("Acc dot: " + str(np.array(self.acc)) + str(np.array(self.prev_acc)))
         self.F_rad_reactn = (Mu0 * self.charge**2) * np.array(self.a_dot) / (6 * pi * C_EM)
+        print("Rad reactn : " + str(self.F_rad_reactn/self.mass))
     #---------#
             
     #---------#
@@ -177,7 +177,6 @@ class Emag_particle:
         self.mink_force = self.gmma * np.array(self.E + self.v_x_B)
         temp_prev_acc = self.acc
         for cord1 in range(3):           
-            #self.acc[cord1] = ((self.charge/self.mass)*(self.mink_force[cord1])) + self.GF[cord1] - (self.F_rad_reactn[cord1] / self.mass)
             temp_acc[cord1] = ((self.charge/self.mass)*(self.mink_force[cord1])) + self.GF[cord1] 
         self.prev_acc = temp_prev_acc
         self.acc_hist.append(temp_prev_acc)
@@ -194,7 +193,6 @@ class Emag_particle:
         self.mink_force = self.gmma * np.array(self.E + self.v_x_B)
         temp_prev_acc = self.acc
         for cord1 in range(3):           
-            #self.acc[cord1] = ((self.charge/self.mass)*(self.mink_force[cord1])) + self.GF[cord1] - (self.F_rad_reactn[cord1] / self.mass)
             temp_acc[cord1] = ((self.charge/self.mass)*(self.mink_force[cord1])) + self.GF[cord1] + (self.F_rad_reactn[cord1] / self.mass)
         self.prev_acc = temp_prev_acc
         self.acc_hist.append(temp_prev_acc)
@@ -257,12 +255,10 @@ class Physical_System_of_particles:
             elif sim_obj.read_choice ==2:
                 ins = Emag_particle()
                 ins.mass = float(data[i][0])
-                #print ins.mass
                 ins.radius = float(data[i][1])
                 ins.charge = float(data[i][2])
                 ins.pos = data[i][3].split(',')
                 ins.pos = [float(ins.pos[j]) for j in range(3)]
-                #ins.prev_pos = ins.pos
                 ins.vel = data[i][4].split(',')
                 ins.vel = [float(ins.vel[j]) for j in range(3)]
                 ins.KE = 0.5*ins.mass*(ins.vel[0]**2+ins.vel[1]**2+ins.vel[2]**2)
@@ -311,7 +307,6 @@ class Physical_System_of_particles:
     
     #---------#    
     def solve_retd_acc(self, par):
-        print(self.ret_t)
         if(self.ret_t > 0): 
             self.retd_acc = par.acc_hist[int(self.ret_t)]
         else:
@@ -674,66 +669,76 @@ class Simulation_object():
                 sc._offsets3d = (self.xplot[i][:plt_till], self.yplot[i][:plt_till], self.zplot[i][:plt_till])
                 plt.draw()
     #---------#
-         
-    #---------#    
-    def init(lines, pts):
-        for line, pt in zip(lines, pts):
-            line.set_data([], [])
-            line.set_3d_properties([])
     
-            pt.set_data([], [])
-            pt.set_3d_properties([])
-        return lines + pts
     #---------#
-      
-    #---------#
-    def animate(self, i, ax3, xplot, yplot, zplot):
-        # set up lines and points
-        colors = plt.cm.jet(np.linspace(0, 1, self.num))
-        lines = sum([ax3.plot([], [], [], '-', c=c)  for c in colors], [])
-        pts = sum([ax3.plot([], [], [], 'o', c=c)  for c in colors], [])  
-        for line, pt, xi, yi, zi in zip(lines, pts, xplot, yplot, zplot):
-            #print 'entered'
-            x, y, z = xi[:i], yi[:i], zi[:i]
-            line.set_data(x, y)
-            line.set_3d_properties(z)
-    
-            pt.set_data(x[-1:], y[-1:])
-            pt.set_3d_properties(z[-1:])
-    
-        #ax.view_init(30, 0.3 * i)
-        #fig.canvas.draw()
-        return lines + pts
-    #---------#
+    def plot_elec_field(self, system):         
+        fig = plt.figure()
+        ax = fig.gca(projection='3d')
         
-    #---------#
-    def traj_animation(self, throttle_ip, timesteps, xplot, yplot, zplot):
-            
-        fig3 = plt.figure()
-        ax3 = p3.Axes3D(fig3)
+        x, y, z = np.meshgrid(np.arange(-10e-11, 12e-11, 2e-11),
+                      np.arange(-10e-11, 12e-11, 2e-11),
+                      np.arange(-10e-11, 12e-11, 2e-11))
+
+        E_X = [[[0 for z_cor in range(len(x))] for y_cor in range(len(x[0]))]for x_cor in range(len(x[0][0]))]
+        E_Y = [[[0 for z_cor in range(len(x))] for y_cor in range(len(x[0]))]for x_cor in range(len(x[0][0]))]
+        E_Z = [[[0 for z_cor in range(len(x))] for y_cor in range(len(x[0]))]for x_cor in range(len(x[0][0]))]
+                    
+        for x_cor in range(len(x[0][0])):
+            for y_cor in range(len(x[0])):
+                for z_cor in range(len(x)):
+                    r = [x[x_cor][y_cor][z_cor], y[x_cor][y_cor][z_cor], z[x_cor][y_cor][z_cor]]
+                    E = system.elec_field(r)
+                    print("Point: " + str(r))
+                    print("Field: " + str(E))
+                    E_X[x_cor][y_cor][z_cor] = E[0]
+                    E_Y[x_cor][y_cor][z_cor] = E[1]
+                    E_Z[x_cor][y_cor][z_cor] = E[2]
+                       
+   
+        ax.quiver(x, y, z, E_X, E_Y, E_Z, length=0.1e-22, color = 'black')
         
-      
-        ax3.set_xlim(min([min(xplot[i]) for i in range(self.num)]),max([max(xplot[i]) for i in range(self.num)]))
-        ax3.set_xlabel('X')
-        ax3.set_ylim(min([min(yplot[i]) for i in range(self.num)]),max([max(yplot[i]) for i in range(self.num)]))
-        ax3.set_ylabel('Y')
-        ax3.set_zlim(min([min(zplot[i]) for i in range(self.num)]),max([max(zplot[i]) for i in range(self.num)]))
-        ax3.set_zlabel('Z')
-            
-        # animation function.  This will be called sequentially with the frame number
-        animation.FuncAnimation(fig3, self.animate, init_func= self.init, frames= int(timesteps/throttle_ip), interval=1, blit=False)   
         plt.show()
     #---------#
-
+    
     #---------#
-    def get_proc_memory_uage(self):
+    def plot_mag_field(self, system):         
+        fig = plt.figure()
+        ax = fig.gca(projection='3d')
+        
+        x, y, z = np.meshgrid(np.arange(-10e-11, 12e-11, 5e-11),
+                      np.arange(-10e-11, 12e-11, 5e-11),
+                      np.arange(-10e-11, 12e-11, 5e-11))
+
+        B_X = [[[0 for z_cor in range(len(x))] for y_cor in range(len(x[0]))]for x_cor in range(len(x[0][0]))]
+        B_Y = [[[0 for z_cor in range(len(x))] for y_cor in range(len(x[0]))]for x_cor in range(len(x[0][0]))]
+        B_Z = [[[0 for z_cor in range(len(x))] for y_cor in range(len(x[0]))]for x_cor in range(len(x[0][0]))]
+                    
+        for x_cor in range(len(x[0][0])):
+            for y_cor in range(len(x[0])):
+                for z_cor in range(len(x)):
+                    r = [x[x_cor][y_cor][z_cor], y[x_cor][y_cor][z_cor], z[x_cor][y_cor][z_cor]]
+                    B = system.mag_field(r)
+                    print("Point: " + str(r))
+                    print("Field: " + str(B))
+                    B_X[x_cor][y_cor][z_cor] = B[0]
+                    B_Y[x_cor][y_cor][z_cor] = B[1]
+                    B_Z[x_cor][y_cor][z_cor] = B[2]
+                       
+   
+        ax.quiver(x, y, z, B_X, B_Y, B_Z, length=1e-11, color = 'black')
+        
+        plt.show()
+    #---------#
+    
+    #---------#
+    def get_proc_memory_usage(self):
             process = psutil.Process(os.getpid())
             print('Proc mem usage: '+ str(process.memory_info().rss/1024**2) + ' MBytes')  
             file_stats = os.stat(__file__)
             print(file_stats)
             print(f'File Size in KiloBytes is {file_stats.st_size / 1024}')
     #---------#
-    
+ 
 #---------#      
         
 
@@ -757,6 +762,7 @@ if __name__ == '__main__':
     
     #------Plot trajectories----------#
     sim.gen_1_plot_for_all_particles()
+    sim.plot_mag_field(system)
     
     #--------Animated plot----------#
     #sim.anim_plot_for_all_particles()
@@ -766,7 +772,7 @@ if __name__ == '__main__':
     print( 'Tot run time: ' + str(end_time - start_time))
        
     #------Calculate memory Usage------#
-    sim.get_proc_memory_uage()
+    sim.get_proc_memory_usage()
 #---------#  
  
     

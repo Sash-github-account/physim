@@ -2,5 +2,5 @@
 2
 1.49e-15
 1e-18
-1
+10
 input_init_cond.txt
