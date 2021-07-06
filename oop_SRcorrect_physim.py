@@ -548,12 +548,13 @@ class Physical_System_of_particles:
 class Simulation_object():
     
     #---------#
-    anim_field = True
+    anim_field = False
     anim_traj = False
     run_w_log = False
-    elec_or_mag = 'elec'
+    elec_or_mag_or_grav = 'grav'
     plot_traj = True
     plot_fields = False
+    log_en = False
     endtime = 0 
     timeres = 0
     timesteps = 0
@@ -569,6 +570,9 @@ class Simulation_object():
     E_X_plot = []
     E_Y_plot = []
     E_Z_plot = []
+    G_X_plot = []
+    G_Y_plot = []
+    G_Z_plot = []
     B_X_plot = []
     B_Y_plot = []
     B_Z_plot = []
@@ -663,7 +667,7 @@ class Simulation_object():
         
             if (file1 != None): file1.write('time: '+ str(self.cur_timestep * self.timeres)+'\n')
  
-            if(self.elec_or_mag == 'elec'):                       
+            if(self.elec_or_mag_or_grav == 'elec'):                       
                 x_field, y_field, z_field, E_X_plot, E_Y_plot, E_Z_plot = self.get_elec_field_grid(system)    
                 self.x_field.append(x_field)
                 self.y_field.append(y_field)
@@ -671,6 +675,14 @@ class Simulation_object():
                 self.E_X_plot.append(E_X_plot)
                 self.E_Y_plot.append(E_Y_plot)
                 self.E_Z_plot.append(E_Z_plot)
+            elif(self.elec_or_mag_or_grav == 'grav'):
+                x_field, y_field, z_field, G_X_plot, G_Y_plot, G_Z_plot = self.get_grav_field_grid(system)   
+                self.x_field.append(x_field)
+                self.y_field.append(y_field)
+                self.z_field.append(z_field)
+                self.G_X_plot.append(G_X_plot)
+                self.G_Y_plot.append(G_Y_plot)
+                self.G_Z_plot.append(G_Z_plot) 
             else:
                 x_field, y_field, z_field, B_X_plot, B_Y_plot, B_Z_plot = self.get_mag_field_grid(system)   
                 self.x_field.append(x_field)
@@ -747,6 +759,17 @@ class Simulation_object():
     #---------#   
     
     #---------#
+    def plot_grav_field(self, system):         
+        fig = plt.figure()
+        ax = fig.gca(projection='3d')
+        
+        x, y, z, G_X, G_Y, G_Z = self.get_grav_field_grid(system)
+                        
+        ax.quiver(x, y, z, G_X, G_Y, G_Z, length= 1e-11, color = 'black')       
+        plt.show()
+    #---------#   
+       
+    #---------#
     def get_elec_field_grid(self, system):         
         x, y, z = np.meshgrid(np.arange(-10e-11, 12e-11, 2.5e-11),
                       np.arange(-10e-11, 12e-11, 2.5e-11),
@@ -787,9 +810,30 @@ class Simulation_object():
                     B_Z[x_cor][y_cor][z_cor] = B[2]                        
         return x, y, z, B_X, B_Y, B_Z     
     #---------#
-
+    
     #---------#
-    def anim_elec_or_mag_field(self, anim, elec_or_mag):
+    def get_grav_field_grid(self, system):              
+        x, y, z = np.meshgrid(np.arange(-10e10, 16e10, 5e10),
+                      np.arange(-10e10, 16e10, 5e10),
+                      np.arange(-10e10, 16e10, 5e10))
+
+        G_X = [[[0 for z_cor in range(len(x))] for y_cor in range(len(x[0]))]for x_cor in range(len(x[0][0]))]
+        G_Y = [[[0 for z_cor in range(len(x))] for y_cor in range(len(x[0]))]for x_cor in range(len(x[0][0]))]
+        G_Z = [[[0 for z_cor in range(len(x))] for y_cor in range(len(x[0]))]for x_cor in range(len(x[0][0]))]
+                    
+        for x_cor in range(len(x[0][0])):
+            for y_cor in range(len(x[0])):
+                for z_cor in range(len(x)):
+                    r = [x[x_cor][y_cor][z_cor], y[x_cor][y_cor][z_cor], z[x_cor][y_cor][z_cor]]
+                    G = system.grav_field(r)
+                    G_X[x_cor][y_cor][z_cor] = G[0]
+                    G_Y[x_cor][y_cor][z_cor] = G[1]
+                    G_Z[x_cor][y_cor][z_cor] = G[2]                        
+        return x, y, z, G_X, G_Y, G_Z     
+    #---------#
+    
+    #---------#
+    def anim_elec_or_mag_or_grav_field(self, anim, elec_or_mag_or_grav):
         
         if(anim):
             fig, ax = plt.subplots(subplot_kw=dict(projection="3d"))
@@ -801,17 +845,25 @@ class Simulation_object():
             def elec_field_snpsht(time):
                 time = int(time)
                 return sim.x_field[time], sim.y_field[time], sim.z_field[time], sim.E_X_plot[time], sim.E_Y_plot[time], sim.E_Z_plot[time] 
-             
-            if(elec_or_mag == 'elec'):
+
+            def grav_field_snpsht(time):
+                time = int(time)
+                return sim.x_field[time], sim.y_field[time], sim.z_field[time], sim.G_X_plot[time], sim.G_Y_plot[time], sim.G_Z_plot[time] 
+                          
+            if(elec_or_mag_or_grav == 'elec'):
                 quiver = ax.quiver(*elec_field_snpsht(0), length = 1e-22, color = 'blue')
+            elif (elec_or_mag_or_grav == 'grav'):
+                quiver = ax.quiver(*grav_field_snpsht(0), length = 1e-11, color = 'blue')
             else:
                 quiver = ax.quiver(*mag_field_snpsht(0), length = 1e-11, color = 'blue')
-              
+
             def update(time):
                 global quiver
                 quiver.remove()            
-                if(elec_or_mag == 'elec'):
+                if(elec_or_mag_or_grav == 'elec'):
                     quiver = ax.quiver(*elec_field_snpsht(time), length = 1e-22, color = 'blue')
+                elif(elec_or_mag_or_grav == 'grav'):
+                    quiver = ax.quiver(*grav_field_snpsht(time), length = 1e-11, color = 'blue')
                 else:
                     quiver = ax.quiver(*mag_field_snpsht(time), length = 1e-11, color = 'blue')
                               
@@ -836,23 +888,30 @@ class Simulation_object():
     
 #---------#   
 if __name__ == '__main__':
+    
     #-----Start Sim------#
     start_time = time.time()
+
 
     #------Setup Sim and System objects-----#
     sim = Simulation_object()
     system = Physical_System_of_particles()
 
+
     #------Create Sim and System params-----#    
-    sim.read_sim_param_input_file("input_set.sim")
+    sim.read_sim_param_input_file("input_set_solar_sys.sim")
     system.setup_system_of_particles_to_simulate(sim)
     sim.setup_x_y_z_t_plots(system)
+
         
     #-------Run particle trajectory simulation-----#
     if(sim.anim_field):
         sim.run_n_particle_sim_w_elec_or_mag_field_anim(system, None)
     else:
-        sim.run_n_particle_sim_w_log_file(system)
+        if(sim.log_en):
+            sim.run_n_particle_sim_w_log_file(system, 'par')
+        else:
+            sim.run_n_particle_sim_w_log_file(system, None)
         
         #------Plot trajectories and fields----------#
         if(sim.plot_traj):
@@ -879,17 +938,25 @@ if __name__ == '__main__':
         def elec_field_snpsht(time):
             time = int(time)
             return sim.x_field[time], sim.y_field[time], sim.z_field[time], sim.E_X_plot[time], sim.E_Y_plot[time], sim.E_Z_plot[time] 
-         
-        if(sim.elec_or_mag == 'elec'):
+        
+        def grav_field_snpsht(time):
+                time = int(time)
+                return sim.x_field[time], sim.y_field[time], sim.z_field[time], sim.G_X_plot[time], sim.G_Y_plot[time], sim.G_Z_plot[time] 
+          
+        if (sim.elec_or_mag_or_grav == 'elec'):
             quiver = ax.quiver(*elec_field_snpsht(0), length = 0.1e-22, color = 'blue')
+        elif (sim.elec_or_mag_or_grav == 'grav'):
+                quiver = ax.quiver(*grav_field_snpsht(0), length = 1e12, color = 'blue')
         else:
             quiver = ax.quiver(*mag_field_snpsht(0), length = 0.1e-11, color = 'blue')
       
         def update(time):
             global quiver
             quiver.remove()            
-            if(sim.elec_or_mag == 'elec'):
+            if(sim.elec_or_mag_or_grav == 'elec'):
                 quiver = ax.quiver(*elec_field_snpsht(time), length = 0.1e-22, color = 'blue')
+            elif(sim.elec_or_mag_or_grav == 'grav'):
+                quiver = ax.quiver(*grav_field_snpsht(time), length = 1e12, color = 'blue')
             else:
                 quiver = ax.quiver(*mag_field_snpsht(time), length = 0.1e-11, color = 'blue')
                        
